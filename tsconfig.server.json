@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "dist-server",
+    "rootDir": ".",
+    "noEmit": false,
+    "declaration": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": ["server", "shared"]
+}
