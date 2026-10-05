@@ -3,10 +3,13 @@ const RATE_LIMIT_WAIT_MS = 12_000;
 
 export function extractJsonObject(raw: string): string {
   const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-  if (trimmed.startsWith("{")) return trimmed;
+  // Small open models frequently leave a trailing comma before a closing
+  // bracket/brace, which JSON.parse rejects outright — safe to drop.
+  const stripTrailingCommas = (text: string) => text.replace(/,(\s*[}\]])/g, "$1");
+  if (trimmed.startsWith("{")) return stripTrailingCommas(trimmed);
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
-  if (start >= 0 && end > start) return trimmed.slice(start, end + 1);
+  if (start >= 0 && end > start) return stripTrailingCommas(trimmed.slice(start, end + 1));
   return trimmed;
 }
 

@@ -8,15 +8,30 @@
     "dev": "concurrently -n server,web -c blue,green \"npm run dev:server\" \"npm run dev:web\"",
     "dev:web": "vite",
     "dev:server": "tsx watch server/index.ts",
+    "db:push": "node scripts/apply-supabase-schema.mjs",
     "build": "tsc -p tsconfig.server.json --noEmit && vite build",
     "start": "node dist-server/index.js",
     "preview": "vite preview"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
+    "@radix-ui/react-accordion": "^1.2.20",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-select": "^2.3.7",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@radix-ui/react-tabs": "^1.1.21",
+    "@supabase/supabase-js": "^2.115.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^13.2.0",
     "hono": "^4.7.10",
+    "lucide-react": "^1.39.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.18.3",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
@@ -24,6 +39,7 @@
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "concurrently": "^9.1.2",
+    "postgres": "^3.4.9",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"

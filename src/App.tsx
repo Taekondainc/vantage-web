@@ -1,238 +1,58 @@
-import { useEffect, useState } from "react";
-import { generateObjectives, checkHealth } from "./api";
-import { useAutoScopeFromText } from "./useAutoScope";
-import { buildSetMarkdown, copyText, openGmail, shareBody } from "./share";
-import type { DraftedSet, ObjectiveKind } from "../shared/types";
+import { lazy, Suspense } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ThemeProvider } from "./theme/ThemeProvider";
 
-function newId() {
-  return crypto.randomUUID();
-}
+const AppShell = lazy(() => import("./pages/AppShell").then((m) => ({ default: m.AppShell })));
+const SignInPage = lazy(() => import("./pages/SignInPage").then((m) => ({ default: m.SignInPage })));
+const AuthCompletePage = lazy(() => import("./pages/AuthCompletePage").then((m) => ({ default: m.AuthCompletePage })));
+const ReportsPage = lazy(() => import("./pages/ReportsPage").then((m) => ({ default: m.ReportsPage })));
+const TasksPage = lazy(() => import("./pages/TasksPage").then((m) => ({ default: m.TasksPage })));
+const ProjectsPage = lazy(() => import("./pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
+const ProjectDetailPage = lazy(() => import("./pages/ProjectDetailPage").then((m) => ({ default: m.ProjectDetailPage })));
+const BillingPage = lazy(() => import("./pages/BillingPage").then((m) => ({ default: m.BillingPage })));
+const HomePage = lazy(() => import("./pages/marketing/HomePage").then((m) => ({ default: m.HomePage })));
+const FeaturesPage = lazy(() => import("./pages/marketing/FeaturesPage").then((m) => ({ default: m.FeaturesPage })));
+const TemplatesPage = lazy(() => import("./pages/marketing/TemplatesPage").then((m) => ({ default: m.TemplatesPage })));
+const ComparePage = lazy(() => import("./pages/marketing/ComparePage").then((m) => ({ default: m.ComparePage })));
+const PricingPage = lazy(() => import("./pages/marketing/PricingPage").then((m) => ({ default: m.PricingPage })));
+const FaqPage = lazy(() => import("./pages/marketing/FaqPage").then((m) => ({ default: m.FaqPage })));
+const AboutPage = lazy(() => import("./pages/marketing/AboutPage").then((m) => ({ default: m.AboutPage })));
+const DownloadPage = lazy(() => import("./pages/marketing/DownloadPage").then((m) => ({ default: m.DownloadPage })));
+const PrivacyPage = lazy(() => import("./pages/marketing/LegalPages").then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import("./pages/marketing/LegalPages").then((m) => ({ default: m.TermsPage })));
+const NotFoundPage = lazy(() => import("./pages/marketing/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 
 export function App() {
-  const [kind, setKind] = useState<ObjectiveKind>("objective");
-  const [text, setText] = useState("");
-  const [repo, setRepo] = useState("");
-  const [branchName, setBranchName] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sets, setSets] = useState<DraftedSet[]>([]);
-  const [aiReady, setAiReady] = useState<boolean | null>(null);
-
-  const kindLabel = kind === "target" ? "targets" : "objectives";
-
-  const autoScope = useAutoScopeFromText(text, {
-    repo,
-    branchName,
-    setRepo,
-    setBranchName,
-  });
-
-  useEffect(() => {
-    void checkHealth().then(setAiReady);
-  }, []);
-
-  async function onGenerate() {
-    setGenerating(true);
-    setError(null);
-    try {
-      const result = await generateObjectives(
-        text,
-        kind,
-        repo.trim() || null,
-        branchName.trim() || null,
-      );
-      const drafted: DraftedSet = {
-        id: newId(),
-        kind,
-        title: result.title,
-        repo: result.repo,
-        branchName: result.branchName,
-        createdAt: new Date().toISOString(),
-        items: result.items.map((item) => ({
-          id: newId(),
-          text: item,
-          status: "not-started",
-        })),
-      };
-      setSets((prev) => [drafted, ...prev]);
-      setText("");
-      setRepo("");
-      setBranchName("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not draft objectives.");
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  function toggleItem(setId: string, itemId: string) {
-    setSets((prev) =>
-      prev.map((set) => {
-        if (set.id !== setId) return set;
-        return {
-          ...set,
-          items: set.items.map((item) =>
-            item.id === itemId
-              ? { ...item, status: item.status === "met" ? "not-started" : "met" }
-              : item,
-          ),
-        };
-      }),
-    );
-  }
-
-  async function onShare(set: DraftedSet, via: "copy" | "gmail") {
-    const markdown = buildSetMarkdown(set);
-    const body = shareBody(markdown);
-    if (via === "copy") {
-      await copyText(body);
-      return;
-    }
-    openGmail(set.title, body);
-  }
-
   return (
-    <div className="page">
-      <header className="hero">
-        <div className="hero-inner">
-          <p className="eyebrow">Vantage · no login</p>
-          <h1>Turn a brief into a checklist</h1>
-          <p className="lede">
-            Paste a project spec or plan. AI reads your scope labels (Source tree, Ref, Codebase,
-            Workline, etc.) and drafts objectives you can share — no GitHub sign-in required.
-          </p>
-          {aiReady === false ? (
-            <p className="banner-warn">Server AI is not configured — scope will use offline heuristics only.</p>
-          ) : null}
-        </div>
-      </header>
-
-      <main className="shell">
-        <section className="card">
-          <div className="card-head">
-            <h2>Objectives &amp; targets</h2>
-            <div className="kind-toggle" role="group" aria-label="Checklist type">
-              <button
-                type="button"
-                className={kind === "objective" ? "active" : ""}
-                onClick={() => setKind("objective")}
-              >
-                Objectives
-              </button>
-              <button
-                type="button"
-                className={kind === "target" ? "active" : ""}
-                onClick={() => setKind("target")}
-              >
-                Targets
-              </button>
-            </div>
-          </div>
-
-          <label className="field">
-            Document or text
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Paste a project brief, spec, or plan…"
-              rows={8}
-              disabled={generating}
-            />
-          </label>
-
-          <div className="scope-row">
-            {autoScope.resolving ? <p className="hint">AI is reading your scope labels…</p> : null}
-            <label>
-              Repo
-              <input
-                value={repo}
-                onChange={(e) => {
-                  autoScope.markRepoEdited();
-                  setRepo(e.target.value);
-                }}
-                placeholder="intent-registry-service or org/repo"
-              />
-            </label>
-            <label>
-              Branch
-              <input
-                value={branchName}
-                onChange={(e) => {
-                  autoScope.markBranchEdited();
-                  setBranchName(e.target.value);
-                }}
-                placeholder="dev/eoi-intake-flow"
-              />
-            </label>
-          </div>
-
-          <div className="actions">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={generating || autoScope.resolving || !text.trim()}
-              onClick={() => void onGenerate()}
-            >
-              {generating ? "Drafting…" : autoScope.resolving ? "Detecting scope…" : `Generate ${kindLabel}`}
-            </button>
-          </div>
-
-          {error ? <p className="error">{error}</p> : null}
-        </section>
-
-        {sets.length === 0 ? (
-          <p className="empty">Your drafted lists will appear here.</p>
-        ) : (
-          <section className="results">
-            {sets.map((set) => (
-              <article key={set.id} className="card result-card">
-                <header className="result-head">
-                  <div>
-                    <h3>{set.title}</h3>
-                    {set.repo || set.branchName ? (
-                      <p className="scope-chip">
-                        {[set.repo, set.branchName].filter(Boolean).join(" · ")}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="share-actions">
-                    <button type="button" className="ghost" onClick={() => void onShare(set, "copy")}>
-                      Copy
-                    </button>
-                    <button type="button" className="ghost" onClick={() => void onShare(set, "gmail")}>
-                      Gmail
-                    </button>
-                  </div>
-                </header>
-                <ul className="checklist">
-                  {set.items.map((item) => (
-                    <li key={item.id}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={item.status === "met"}
-                          onChange={() => toggleItem(set.id, item.id)}
-                        />
-                        <span>{item.text}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </section>
-        )}
-
-        <footer className="footer">
-          <p>
-            Want GitHub reports, Jira sync, and desktop workflows?{" "}
-            <a href="https://github.com/Taekondainc/vantage" target="_blank" rel="noreferrer">
-              Get the Vantage desktop app
-            </a>
-            .
-          </p>
-        </footer>
-      </main>
-    </div>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Suspense fallback={<div className="grid min-h-screen place-items-center bg-canvas font-mono text-sm text-muted">Loading...</div>}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/features" element={<FeaturesPage />} />
+            <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/compare" element={<ComparePage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/faq" element={<FaqPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/download" element={<DownloadPage />} />
+            <Route path="/legal/privacy" element={<PrivacyPage />} />
+            <Route path="/legal/terms" element={<TermsPage />} />
+            <Route path="/app/sign-in" element={<SignInPage />} />
+            <Route path="/app/signin" element={<SignInPage />} />
+            <Route path="/app/auth/complete" element={<AuthCompletePage />} />
+            <Route path="/app" element={<AppShell />}>
+              <Route index element={<ReportsPage />} />
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="projects" element={<ProjectsPage />} />
+              <Route path="projects/:id" element={<ProjectDetailPage />} />
+              <Route path="billing" element={<BillingPage />} />
+              <Route path="objectives" element={<Navigate to="/app/tasks" replace />} />
+            </Route>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

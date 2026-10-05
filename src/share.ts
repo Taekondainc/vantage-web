@@ -13,7 +13,7 @@ export function buildSetMarkdown(set: DraftedSet): string {
   const body = set.items.map((item) => `- [${STATUS_LABEL[item.status]}] ${item.text}`).join("\n");
   const scope =
     set.repo || set.branchName
-      ? `\n\nScope: ${[set.repo, set.branchName].filter(Boolean).join(" · ")}`
+      ? `\n\nScope: ${[set.repo, set.branchName].filter(Boolean).join(" - ")}`
       : "";
   return `# ${label}\n\n### ${heading}\n\n${body}${scope}\n`;
 }
@@ -37,4 +37,18 @@ export function openGmail(title: string, body: string) {
 
 export async function copyText(text: string) {
   await navigator.clipboard.writeText(text);
+}
+
+/** Saves text as a downloaded file via a throwaway object URL — the standard
+ * browser download pattern, no server round-trip needed. */
+export function downloadText(filename: string, text: string, mime = "text/markdown") {
+  const blob = new Blob([text], { type: `${mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
